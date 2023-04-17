@@ -1,0 +1,85 @@
+service: put-source-into-s3
+
+frameworkVersion: "3"
+
+custom:
+  kmsSecrets:
+    file: ${file(./.secrets.yml)}
+
+provider:
+  name: aws
+  stage: any
+  runtime: python3.9
+  region: ap-northeast-1
+
+  apiGateway:
+    resourcePolicy:
+      - Effect: Allow
+        Principal: "*"
+        Action: execute-api:Invoke
+        Resource:
+          - execute-api:/*/*/*
+        Condition:
+          IpAddress:
+            aws:SourceIp:
+              - "54.64.128.240"
+              - "54.178.233.194"
+              - "13.112.1.142"
+              - "13.112.147.36"
+              - "54.238.175.47"
+              - "54.168.25.33"
+              - "52.192.156.153"
+              - "54.178.230.204"
+              - "52.197.88.78"
+              - "13.112.137.175"
+              - "34.211.15.3"
+              - "35.160.57.23"
+              - "54.68.48.106"
+              - "52.88.47.69"
+              - "52.68.247.253"
+              - "18.182.251.152"
+              - "54.248.107.22"
+              - "54.248.105.89"
+              - "54.238.168.195"
+              - "52.192.66.90"
+              - "54.65.251.183"
+              - "54.250.148.49"
+              - "35.166.55.243"
+              - "50.112.242.159"
+              - "52.199.112.83"
+              - "35.73.201.244"
+              - "35.72.166.154"
+              - "35.73.143.41"
+              - "35.74.201.20"
+              - "52.198.115.185"
+              - "35.165.230.177"
+              - "18.236.6.123"
+
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "s3:PutObject"
+      Resource: "arn:aws:s3:::${self:custom.kmsSecrets.file.bucket_name}/*"
+    - Effect: "Allow"
+      Action:
+        - KMS:Decrypt
+      Resource: ${self:custom.kmsSecrets.file.arn}
+
+functions:
+  main:
+    handler: handler.main
+    memorySize: 128
+    timeout: 300
+    events:
+      - http:
+          path: git/push
+          method: post
+          async: true
+          integration: lambda
+
+    environment:
+      REPOSITORY_URL: ${self:custom.kmsSecrets.file.repository_url}
+      USER_NAME: ${self:custom.kmsSecrets.file.user_name}
+      PASSWORD: ${self:custom.kmsSecrets.file.password}
+      BUCKET_NAME: ${self:custom.kmsSecrets.file.bucket_name}
+      TARGET_BRANCHES: ${self:custom.kmsSecrets.file.target_branches}
